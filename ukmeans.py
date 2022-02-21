@@ -36,12 +36,12 @@ class UKMeans(object):
     def _update_gamma(self):
         self.gamma = np.exp(-self.n_centers/250)
 
-    def _update_alpha(self, X: np.ndarray, gamma: float):
+    def _update_alpha(self, X: np.ndarray):
         entropy = np.sum(self.alpha * np.log(self.alpha))
         new_alpha = np.zeros_like(self.alpha)
         for kth, alpha in enumerate(self.alpha):
             new_alpha[kth] = np.sum(self.z[:, kth])/X.shape[0] +\
-                (self.beta/gamma)*alpha*(np.log(alpha)-entropy)
+                (self.beta/self.gamma)*alpha*(np.log(alpha)-entropy)
         self.alpha = new_alpha
 
     def _update_beta(self, X: np.ndarray, alpha_t: np.ndarray):
@@ -87,16 +87,16 @@ class UKMeans(object):
         self.centroids = X.copy()
         self.n_centers = self.centroids.shape[0]
         self.alpha = np.array([1 / self.n_centers] * self.n_centers)
-        gamma = np.exp(-self.n_centers/250)
         self.z = np.zeros((X.shape[0], self.n_centers))
         for i in range(X.shape[0]):
-            a = [np.linalg.norm(X[i] - k)**2 - gamma*np.log(self.alpha[j])
+            a = [np.linalg.norm(X[i] - k)**2 - self.gamma*np.log(self.alpha[j])
                  for j, k in enumerate(self.centroids)]
             a[i] = np.inf
             idx = np.argmin(a)
             self.z[i, :] = 0
             self.z[i, idx] = 1
-        self._update_alpha(X, gamma)
+        self._update_gamma()
+        self._update_alpha(X)
         self._update_c_alpha_z(X)
         self.record.append({
             'centroids': self.centroids,
@@ -109,7 +109,7 @@ class UKMeans(object):
             alpha_t = self.alpha.copy()
             self._compute_z(X)
             self._update_gamma()
-            self._update_alpha(X, self.gamma)
+            self._update_alpha(X)
             self._update_beta(X, alpha_t)
             idx = self._update_c_alpha_z(X)
             # if len(self.alpha == 1):
